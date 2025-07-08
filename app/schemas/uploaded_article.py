@@ -21,7 +21,7 @@ class UploadedArticle(BaseModel):
     user_id: PyObjectId = Field(...)
     research_id: str = None
     original_text: str = None
-    chunks: str= None
+    chunks: List[str]= None
     embedding_ids: List[float]
 
     class Config:
@@ -31,7 +31,9 @@ class UploadedArticle(BaseModel):
 
 class UploadedArticleCreate(BaseModel):
     user_id: str
-    title: str
-    content: str
     research_id: str
     original_text: str
+    chunks: List[str]  # <- change from str to List[str]
+    embedding_ids: List[float]
+    # title: str
+    # content: str

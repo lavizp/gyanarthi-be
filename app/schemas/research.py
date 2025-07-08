@@ -27,3 +27,4 @@ class Research(BaseModel):
 class ResearchCreate(BaseModel):
     title: str
     description: str
+    pdf_url: str
