@@ -28,3 +28,7 @@ class ResearchCreate(BaseModel):
     title: str
     description: str
     pdf_url: str
+
+class GenerateArticle(BaseModel):
+    query: str
+    research_id: str
