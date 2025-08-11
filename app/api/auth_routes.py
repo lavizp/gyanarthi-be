@@ -37,8 +37,22 @@ async def register(payload: UserCreate, res: Response,db = Depends(get_db)):
         refresh_token=refresh
     )
     await db["refresh_tokens"].insert_one(refresh_token.model_dump(by_alias=True))
-    res.set_cookie("access_token", access, httponly=True)
-    res.set_cookie("refresh_token", refresh, httponly=True)
+    res.set_cookie(
+        key="refresh_token",
+        value=refresh,
+        httponly=True,
+        samesite="none",
+        secure=True,
+        path="/",
+    )
+    res.set_cookie(
+        key="access_token",
+        value=access,
+        httponly=True,
+        samesite="none",
+        secure=True,
+        path="/",
+    )
 
     return {"message": "User created", "user": {"id": user_data.id, "email": data["email"]}}
 
@@ -59,6 +73,20 @@ async def login(payload: UserLogin, res: Response, db = Depends(get_db)):
         {"$set": {"refresh_token": refresh}},
         upsert=True
     )
-    res.set_cookie("access_token", access, httponly=True)
-    res.set_cookie("refresh_token", refresh, httponly=True)
+    res.set_cookie(
+        key="refresh_token",
+        value=refresh,
+        httponly=True,
+        samesite="none",
+        secure=True,
+        path="/",
+    )
+    res.set_cookie(
+        key="access_token",
+        value=access,
+        httponly=True,
+        samesite="none",
+        secure=True,
+        path="/",
+    )
     return {"message": "Logged in"}

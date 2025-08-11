@@ -89,9 +89,31 @@ async def getAlResearch(req: Request, db=Depends(get_db)):
     research_list = await cursor.to_list(length=None)
     return [Research(**r) for r in research_list]
 
+@router.get("/{id}", response_model=Research, response_model_by_alias=False)
+async def get_research(id: str, req: Request, db=Depends(get_db)):
+    user_id = req.state.user["id"]
+    research = await db["research"].find_one({
+        "_id": ObjectId(id),
+        "user_id": ObjectId(str(user_id))
+    })
+    if not research:
+        raise HTTPException(status_code=404, detail="Research not found")
+    return Research(**research)
+
+@router.get("/written_article/{id}", response_model=WrittenArticle, response_model_by_alias=False)
+async def get_article_detail(id: str, req:Request, db=Depends(get_db)):
+    user_id = req.state.user["id"]
+    article = await db["written_article"].find_one({
+        "research_id": id,
+        "user_id": ObjectId(str(user_id))
+    })
+    if not article:
+        raise HTTPException(status_code=404, detail="Article not found")
+    return WrittenArticle(**article)
+
+
 @router.post("/generate")
 async def generateArticle(payload:GenerateArticle,req: Request, db = Depends(get_db)):
-    user_id = req.state.user["id"]
     data = payload.model_dump()
     rag_system = RAGSystem()
     research_id = data["research_id"]
