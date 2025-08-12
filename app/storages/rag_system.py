@@ -32,7 +32,39 @@ class RAGSystem:
         chunks = splitter.split_text(full_text)
         return chunks
 
+    async def review_article(self, title: str, content: str, research_id: str = None) -> dict:
+        """
+        Return a dict compatible with AIFeedback:
+        {
+          "grammar_score": float (0-1),
+          "clarity_score": float (0-1),
+          "factual_correctness": float (0-1),
+          "suggestions": str
+        }
+        """
+        # TODO: Replace with a real LLM or heuristic-based review.
+        # Example: run content through your QA pipeline, grammar checker, and
+        # optionally compare with retrieved chunks from research_id for factuality.
 
+        # Placeholder naive scoring:
+        length = len(content.split())
+        grammar_score = 0.85 if length > 50 else 0.6
+        clarity_score = 0.8 if length > 100 else 0.65
+        factual_correctness = 0.75  # Replace with retrieval-based check if research_id present
+
+        suggestions = (
+            "- Add an executive summary up top.\n"
+            "- Use shorter paragraphs.\n"
+            "- Include citations to specific pages from your source PDF.\n"
+            "- Add a concluding section with 3–5 key takeaways."
+        )
+
+        return {
+            "grammar_score": grammar_score,
+            "clarity_score": clarity_score,
+            "factual_correctness": factual_correctness,
+            "suggestions": suggestions
+    }
     def get_document_embeddings(self, chunks, user_id, research_id):
         docs = [
             {

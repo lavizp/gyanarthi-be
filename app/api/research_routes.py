@@ -1,9 +1,9 @@
 from typing import List
 from bson import ObjectId
-from fastapi import APIRouter, Depends,Request, Response, HTTPException,File,UploadFile
+from fastapi import APIRouter, Body, Depends,Request, Response, HTTPException,File,UploadFile
 from app.db.mongo import get_db
 from app.schemas.research import GenerateArticle, Research, ResearchCreate
-from app.schemas.written_article import WrittenArticle
+from app.schemas.written_article import WrittenArticle, WrittenArticleUpdate
 from app.schemas.uploaded_article import UploadedArticle
 from app.storages.rag_system import RAGSystem
 import cloudinary.uploader
@@ -71,6 +71,84 @@ async def createResearch(payload: ResearchCreate, req: Request, res: Response, d
         "uploaded_article_id": inserted_article.inserted_id,
         "written_article": new_written_article
     }
+@router.put("/written_article/{id}", response_model=WrittenArticle, response_model_by_alias=False)
+async def update_written_article(
+    id: str,
+    payload: WrittenArticleUpdate = Body(...),
+    req: Request = None,
+    db = Depends(get_db)
+):
+    user_id = req.state.user["id"]
+
+    article = await db["written_article"].find_one({
+        "_id": ObjectId(id),
+        "user_id": ObjectId(str(user_id))
+    })
+    if not article:
+        raise HTTPException(status_code=404, detail="Article not found")
+
+    update_doc = {}
+    if payload.title is not None:
+        update_doc["title"] = payload.title
+    if payload.content is not None:
+        update_doc["content"] = payload.content
+
+    if not update_doc:
+        raise HTTPException(status_code=400, detail="Nothing to update")
+
+    await db["written_article"].update_one(
+        {"_id": ObjectId(id)},
+        {"$set": update_doc}
+    )
+
+    updated = await db["written_article"].find_one({"_id": ObjectId(id)})
+    return WrittenArticle(**updated)
+
+@router.post("/written_article/{id}/review", response_model=WrittenArticle, response_model_by_alias=False)
+async def review_written_article(
+    id: str,
+    req: Request,
+    db = Depends(get_db)
+):
+    user_id = req.state.user["id"]
+
+    article = await db["written_article"].find_one({
+        "_id": ObjectId(id),
+        "user_id": ObjectId(str(user_id))
+    })
+    if not article:
+        raise HTTPException(status_code=404, detail="Article not found")
+
+    content = article.get("content") or ""
+    if not content.strip():
+        raise HTTPException(status_code=400, detail="Article content is empty; nothing to review")
+
+    # Generate feedback (use your RAGSystem, or LLM of choice)
+    rag_system = RAGSystem()
+    try:
+        feedback = await rag_system.review_article(
+            title=article.get("title", ""),
+            content=content,
+            research_id=article.get("research_id")  # optional, if you want to cross-check against sources
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to generate review: {str(e)}")
+
+    ai_feedback_doc = {
+        "grammar_score": feedback.get("grammar_score"),
+        "clarity_score": feedback.get("clarity_score"),
+        "factual_correctness": feedback.get("factual_correctness"),
+        "suggestions": feedback.get("suggestions"),
+    }
+
+    # Persist feedback
+    await db["written_article"].update_one(
+        {"_id": ObjectId(id)},
+        {"$set": {"ai_feedback": ai_feedback_doc}}
+    )
+
+    updated = await db["written_article"].find_one({"_id": ObjectId(id)})
+    return WrittenArticle(**updated)
 
 @router.post("/upload-pdf")
 async def upload_pdf(file: UploadFile = File(...), db=Depends(get_db)):

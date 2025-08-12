@@ -13,7 +13,17 @@ class PyObjectId(ObjectId):
             raise ValueError("Invalid ObjectId")
         return ObjectId(v)
 
+class WrittenArticleUpdate(BaseModel):
+    title: Optional[str] = Field(None, description="Updated title for the written article")
+    content: Optional[str] = Field(None, description="Updated content for the written article")
 
+    class Config:
+        schema_extra = {
+            "example": {
+                "title": "Updated Article Title",
+                "content": "This is the revised content of the article..."
+            }
+        }
 class AIFeedback(BaseModel):
     grammar_score: Optional[float] = None
     clarity_score: Optional[float] = None
