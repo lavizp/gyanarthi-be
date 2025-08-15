@@ -81,7 +81,7 @@ async def update_written_article(
     user_id = req.state.user["id"]
 
     article = await db["written_article"].find_one({
-        "_id": ObjectId(id),
+        "research_id": id,
         "user_id": ObjectId(str(user_id))
     })
     if not article:
@@ -97,11 +97,11 @@ async def update_written_article(
         raise HTTPException(status_code=400, detail="Nothing to update")
 
     await db["written_article"].update_one(
-        {"_id": ObjectId(id)},
+        {"research_id": id},
         {"$set": update_doc}
     )
 
-    updated = await db["written_article"].find_one({"_id": ObjectId(id)})
+    updated = await db["written_article"].find_one({"research_id": id})
     return WrittenArticle(**updated)
 
 @router.post("/written_article/{id}/review", response_model=WrittenArticle, response_model_by_alias=False)
@@ -111,9 +111,10 @@ async def review_written_article(
     db = Depends(get_db)
 ):
     user_id = req.state.user["id"]
-
+    print(id)
+    print(user_id)
     article = await db["written_article"].find_one({
-        "_id": ObjectId(id),
+        "research_id": id,
         "user_id": ObjectId(str(user_id))
     })
     if not article:
@@ -133,7 +134,7 @@ async def review_written_article(
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to generate review: {str(e)}")
-
+    print(feedback.get("grammar_score"))
     ai_feedback_doc = {
         "grammar_score": feedback.get("grammar_score"),
         "clarity_score": feedback.get("clarity_score"),
@@ -143,11 +144,11 @@ async def review_written_article(
 
     # Persist feedback
     await db["written_article"].update_one(
-        {"_id": ObjectId(id)},
+        {"research_id": id},
         {"$set": {"ai_feedback": ai_feedback_doc}}
     )
 
-    updated = await db["written_article"].find_one({"_id": ObjectId(id)})
+    updated = await db["written_article"].find_one({"research_id": id})
     return WrittenArticle(**updated)
 
 @router.post("/upload-pdf")

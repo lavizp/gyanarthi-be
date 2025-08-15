@@ -1,10 +1,12 @@
-
+import json
 from langchain.embeddings import HuggingFaceEmbeddings
 from langchain_chroma import Chroma
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 import fitz  
+import re
 from langchain.chains import RetrievalQA
 from langchain_groq import ChatGroq
+from langchain.prompts import PromptTemplate
 class RAGSystem:
     def __init__(self):
         self.embeddins = HuggingFaceEmbeddings(
@@ -34,37 +36,56 @@ class RAGSystem:
 
     async def review_article(self, title: str, content: str, research_id: str = None) -> dict:
         """
-        Return a dict compatible with AIFeedback:
-        {
-          "grammar_score": float (0-1),
-          "clarity_score": float (0-1),
-          "factual_correctness": float (0-1),
-          "suggestions": str
-        }
+        Uses Groq LLM to generate grammar, clarity, factual correctness scores and suggestions.
         """
-        # TODO: Replace with a real LLM or heuristic-based review.
-        # Example: run content through your QA pipeline, grammar checker, and
-        # optionally compare with retrieved chunks from research_id for factuality.
 
-        # Placeholder naive scoring:
-        length = len(content.split())
-        grammar_score = 0.85 if length > 50 else 0.6
-        clarity_score = 0.8 if length > 100 else 0.65
-        factual_correctness = 0.75  # Replace with retrieval-based check if research_id present
-
-        suggestions = (
-            "- Add an executive summary up top.\n"
-            "- Use shorter paragraphs.\n"
-            "- Include citations to specific pages from your source PDF.\n"
-            "- Add a concluding section with 3–5 key takeaways."
+        llm = ChatGroq(
+            groq_api_key="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",
+            model_name="llama3-70b-8192",
+            temperature=0.2
         )
 
-        return {
-            "grammar_score": grammar_score,
-            "clarity_score": clarity_score,
-            "factual_correctness": factual_correctness,
-            "suggestions": suggestions
-    }
+        system_prompt = """
+        You are an academic writing reviewer.
+        Analyze the given article and return JSON with:
+        - grammar_score: float between 0 and 1
+        - clarity_score: float between 0 and 1
+        - factual_correctness: float between 0 and 1
+        - suggestions: a short list of improvement suggestions
+        Ensure the JSON is strictly in this format:
+        {
+          "grammar_score": <float>,
+          "clarity_score": <float>,
+          "factual_correctness": <float>,
+          "suggestions": "<string>"
+        }
+        """
+
+        user_prompt = f"""
+        Title: {title}
+        Content: {content}
+
+        Research ID: {research_id or "None"}
+        """
+
+        response = await llm.ainvoke([
+            {"role": "system", "content": system_prompt.strip()},
+            {"role": "user", "content": user_prompt.strip()}
+        ])
+        try:
+            return json.loads(response.content)
+        except Exception:
+            match = re.search(r"\{[\s\S]*\}", response.content)
+            if match:
+                return json.loads(match.group(0))
+            # Final fallback
+            return {
+                "grammar_score": 0.0,
+                "clarity_score": 0.0,
+                "factual_correctness": 0.0,
+                "suggestions": f"Could not parse Groq output: {response.content}"
+            }
+
     def get_document_embeddings(self, chunks, user_id, research_id):
         docs = [
             {
@@ -85,14 +106,50 @@ class RAGSystem:
         retriever = self.vectordb.as_retriever(
             search_kwargs={"k": 5, "filter": {"research_id": str(research_id)}}
         )
+
         llm = ChatGroq(
             groq_api_key="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",
-            model_name="llama3-70b-8192",  # or llama3-70b-8192
+            model_name="llama3-70b-8192",
             temperature=0.2
         )
+
+        # Create system + user prompt template
+        template = """
+        You are a professional article generator.
+
+        Goal:
+        Write a clear, accurate, and well-structured article based on the user’s question and the provided context. Prioritize correctness, neutral tone, and readability.
+
+        Instructions:
+        - Use only the information in the Context. If something is unknown or not supported by the Context, state that it’s not available.
+        - Answer the Question directly and comprehensively.
+        - Organize the article into logical paragraphs. Use brief headings if helpful.
+        - Maintain a professional, confident tone; avoid fluff and repetition.
+        - Define terms briefly when first introduced.
+        - Be precise with facts and avoid speculation.
+        - Keep formatting simple: paragraphs, optional headings, and bullet points when summarizing.
+
+        Context:
+        {context}
+
+        Question:
+        {question}
+
+        Output:
+        A polished article (one paragraph) that addresses the Question using the Context, written for a general audience with a professional tone.
+        Also, dont give any context. Give only the direct copyable asnwer.
+        """
+
+        prompt = PromptTemplate(
+            template=template,
+            input_variables=["context", "question"]
+        )
+
         qa_chain = RetrievalQA.from_chain_type(
             llm=llm,
             chain_type="stuff",
-            retriever=retriever
+            retriever=retriever,
+            chain_type_kwargs={"prompt": prompt}
         )
+
         return qa_chain.run(query)
