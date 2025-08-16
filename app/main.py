@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from app.api.auth_routes import router as auth_routes
 from app.api.research_routes import router as research_routes
+from app.api.chat_routes import router as chat_routes
 from contextlib import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
 from app.auth.middleware import AuthMiddleware
@@ -24,3 +25,4 @@ app.add_middleware(
 app.add_middleware(AuthMiddleware)
 app.include_router(auth_routes)
 app.include_router(research_routes)
+app.include_router(chat_routes)

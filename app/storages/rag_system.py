@@ -7,6 +7,9 @@ import re
 from langchain.chains import RetrievalQA
 from langchain_groq import ChatGroq
 from langchain.prompts import PromptTemplate
+from langchain.chains import LLMChain
+from langchain.memory import ConversationBufferMemory
+
 class RAGSystem:
     def __init__(self):
         self.embeddins = HuggingFaceEmbeddings(
@@ -153,3 +156,29 @@ class RAGSystem:
         )
 
         return qa_chain.run(query)
+    
+    def generate_chat_response(self, query: str, chat_history: list[str]):
+            context_text = "\n".join(chat_history)
+        
+            llm = ChatGroq(
+                groq_api_key="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",
+                model_name="llama3-70b-8192",
+                temperature=0.2
+            )
+        
+            prompt = PromptTemplate(
+                template="""
+        You are a helpful chatbot.
+        Conversation so far:
+        {context}
+        
+        User: {question}
+        Chatbot:""",
+                input_variables=["context", "question"]
+            )
+        
+            chain = LLMChain(llm=llm, prompt=prompt)
+            return chain.run(context=context_text, question=query)
+        
+
+    
