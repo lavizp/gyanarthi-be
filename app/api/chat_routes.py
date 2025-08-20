@@ -26,10 +26,17 @@ async def create_new_chat(payload: CreateChatRequest, req: Request, res:Response
 @router.get('/histories',response_model = List[ChatSessionModel])
 async def get_all_chat_histories(req: Request, db = Depends(get_db)):
     user_id = req.state.user["id"]
-    cursor = db["chat"].find({"user_id": ObjectId(str(user_id))})
+    cursor = db["chat"].find({"user_id": ObjectId(str(user_id))}).sort("updated_at", -1)
     chat_list = await cursor.to_list(length=None)
     return [ChatSessionModel(**r) for r in chat_list]
 
+@router.get("/history/{id}", response_model=List[MessageModel], response_model_by_alias=False)
+async def get_messages_by_id(id: str, req: Request, db=Depends(get_db)):
+    cursor = db["message"].find({"session_id": ObjectId(id)})
+    messages = await cursor.to_list(length=None)  # convert cursor to list
+    if not messages:
+        raise HTTPException(status_code=404, detail="Message not found")
+    return [MessageModel(**r) for r in messages]
 
 @router.post('/stream', response_model=MessageModel)
 async def stream_response(payload:CreateMessageRequest, req:Request, db=Depends(get_db)):
