@@ -56,7 +56,7 @@ class CreateChatResponse(BaseModel):
 class StreamChatRequest(BaseModel):
     session_id: str = Field(..., description="Existing chat session id")
     prompt: str = Field(..., description="User prompt")
-    model: str = Field(default="llama-3.1-70b-versatile")
+    model: str = Field(default="llama-3.3-70b-versatile")
     temperature: float = Field(default=0.2, ge=0.0, le=2.0)
     max_tokens: Optional[int] = Field(default=None, ge=1)
     system_prompt: Optional[str] = Field(default=None)

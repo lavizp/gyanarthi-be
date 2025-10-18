@@ -44,7 +44,7 @@ class RAGSystem:
 
         llm = ChatGroq(
             groq_api_key="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",
-            model_name="llama3-70b-8192",
+            model_name="llama-3.3-70b-versatile",
             temperature=0.2
         )
 
@@ -112,7 +112,7 @@ class RAGSystem:
 
         llm = ChatGroq(
             groq_api_key="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",
-            model_name="llama3-70b-8192",
+            model_name="llama-3.3-70b-versatile",
             temperature=0.2
         )
 
@@ -162,7 +162,7 @@ class RAGSystem:
         
             llm = ChatGroq(
                 groq_api_key="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",
-                model_name="llama3-70b-8192",
+                model_name="llama-3.3-70b-versatile",
                 temperature=0.2
             )
         

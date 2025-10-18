@@ -18,6 +18,7 @@ class Research(BaseModel):
     user_id: PyObjectId
     title: str
     description: str
+    date: str
 
     class Config:
         allow_population_by_field_name = True
@@ -28,6 +29,7 @@ class ResearchCreate(BaseModel):
     title: str
     description: str
     pdf_url: str
+    date: str
 
 class GenerateArticle(BaseModel):
     query: str

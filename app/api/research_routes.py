@@ -38,7 +38,8 @@ async def createResearch(payload: ResearchCreate, req: Request, res: Response, d
     new_research = Research(
         user_id=ObjectId(str(user_id)),
         description=data["description"],
-        title=data["title"]
+        title=data["title"],
+        date=data["date"]
     )
     insert_result = await db["research"].insert_one(new_research.model_dump(by_alias=True))
     research_id = insert_result.inserted_id

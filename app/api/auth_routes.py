@@ -59,10 +59,11 @@ async def register(payload: UserCreate, res: Response,db = Depends(get_db)):
 @router.post("/login")
 async def login(payload: UserLogin, res: Response, db = Depends(get_db)):
     data = payload.model_dump()
-    user = await db["users"].find_one({"email": data["email"]})
+    user = await db["users"].find_one({"email": "admin@amdin.com"})
+    print(user)
     if not user or not verify_password(data["password"], user["password"]):
         raise HTTPException(status_code=401, detail="Invalid credentials")
-    
+    print("ya pugyo")
     user_id = str(user["_id"]) 
     refresh = create_refresh_token({"id": user_id, "email": user["email"]})
     access = create_access_token({"id": user_id, "email": user["email"]})
